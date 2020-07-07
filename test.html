@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<style type="text/css">
+	</style>
+</head>
+<body>
+	<div class='log'>
+		
+	</div>
+	<canvas id='my-canvas' width='1280' height='880'></canvas>
+	<script type="text/javascript" src='./config.js'></script>
+	<script type="text/javascript" src='./grid.js'></script>
+	<script type="text/javascript" src='./spirit.js'></script>
+	<script type="text/javascript" src='./channel.js'></script>
+	<script type="text/javascript" src='./canvas.js'></script>
+	<script type="text/javascript" src='./way.js'></script>
+	<script type="text/javascript" src='./game.js'></script>
+<script type="text/javascript">
+const game = new Game({x: 6, y: 6})
+// class Line{
+// 	constructor(startP, endP, direction) {
+// 		this.inflect = 0
+// 		this.startP = startP
+// 		this.currentP = {}
+// 		this.endP = endP
+// 		this.direction = direction
+// 		this.nextP = {}
+// 		this.line = [this.startP]
+// 		this.turnCount = -1
+// 	}
+// 	move(){
+// 		this.autoFindRoad()
+// 		console.log(this.line)
+// 	}
+// 	getDirection() {
+// 		let direction
+// 		console.log(this.currentP.directionArr)
+// 		console.log(this.currentP.prevdirection)
+// 		if (!this.currentP.directionArr.length) {
+// 			console.log('没有解法了')
+// 			return 'end'
+// 		}
+// 		let index = this.currentP.directionArr.findIndex((v) => v === this.direction)
+// 		if ( index > -1) {
+// 			direction = this.direction
+// 			this.currentP.directionArr.splice(index, 1)
+// 		} else {
+// 			direction = this.currentP.directionArr.pop()
+// 			if (direction === this.getReverseDirection(this.currentP.prevdirection)) {
+// 				direction = this.currentP.directionArr.pop()
+// 			}
+// 		}
+// 		this.prevdirection = this.direction
+// 		this.direction = direction
+// 		return direction
+// 	}
+// 	getReverseDirection(d) {
+// 		let result
+// 		switch(d) {
+// 			case 't':
+// 				result = 'b'
+// 				break;
+// 			case 'r':
+// 				result = 'l;'
+// 				break;
+// 			case 'b':
+// 				result = 't'
+// 				break;
+// 			case 'l':
+// 				result = 'r'
+// 				break;
+// 		}
+// 		return result
+// 	}
+// 	autoFindRoad() {
+// 		this.currentP = this.line[this.line.length - 1]
+// 		const { x: startX, y: startY } = this.currentP
+// 		const { x: endX, y: endY } = this.endP
+
+// 		let direction = this.getDirection()
+// 		if (direction === 'end') {
+// 			console.log('没有解法了')
+// 			draw(arr, this.line)
+// 			return
+// 		}
+// 		if (!direction) {
+// 			this.backPrevPoint()
+// 			return
+// 		}
+// 		let nextP = this.getNextP(startX, startY, direction)
+// 		nextP.prevdirection = direction
+// 		if (nextP.isBlank) {
+// 			this.line.push(nextP)
+// 			this.autoFindRoad()
+// 		} else {
+// 			if (nextP.x !== endX || nextP.y !== endY) {
+// 				console.log('拐弯')
+// 				this.turnCorner()
+// 				this.currentP.isTurned = true
+				
+// 			} else {
+// 				console.log('寻路成功')
+// 				draw(arr, this.line)
+// 			}
+			
+// 		}
+// 		return nextP.isBlank
+// 	}
+// 	draw() {
+
+// 	}
+// 	turnCorner() {
+// 		if (this.turnCount == 2) {
+// 			console.log('拐弯次数到2了')
+// 			this.turnCount--
+// 			this.backPrevTurnPoint()
+// 			this.direction = this.line[this.line.length - 1].direction
+// 			this.autoFindRoad()
+// 			return
+// 		}
+// 		this.direction = this.prevdirection
+		
+// 		if (!this.autoFindRoad()) this.turnCount++
+// 	}
+// 	backPrevTurnPoint() {
+// 		const index = this.line.reverse().findIndex(v => v.isTurned)
+// 		this.line.reverse().splice(index)
+// 		console.log(this.line)
+// 	}
+// 	backPrevPoint() {
+// 		console.log('回到上一点')
+// 		this.line.splice(-1)
+// 		this.direction = this.line[this.line.length - 1].direction
+// 		this.autoFindRoad()
+// 	}
+//  	getNextP(startX, startY, direction) {
+// 		let nextP
+// 		console.log(startX, startY)
+// 		switch(direction) {
+// 			case 'r':
+// 					nextP = arr[startX + 1][startY]
+// 				break;
+// 			case 'b':
+// 					nextP = arr[startX][startY + 1]
+// 				break;
+// 			case 'l':
+// 					nextP = arr[startX - 1][startY]
+// 				break;
+// 			case 't':
+// 					nextP = arr[startX ][startY - 1]
+// 				break;
+// 		}
+// 		console.log(direction)
+// 		console.log(nextP)
+// 		if (nextP) return nextP
+// 	}
+// }
+// function createArray(x, y) {
+// 	const arr = []
+// 	for (let i = 0; i < x; i++) {
+// 		const innerarr = []
+// 		for (let j = 0; j < y; j++) {
+// 			if (i ==0 || i == x - 1 || j== 0 || j == y - 1) {
+// 				innerarr.push(new grid(i, j, true ))	
+// 			} else {
+// 				innerarr.push(new grid(i, j))
+// 			}
+// 		}
+// 		arr.push(innerarr)
+// 	}
+
+// 	return arr
+// }
+// const arr = createArray(6, 6)
+// function makeSnooker(snooker) {
+// 	snooker.forEach(v => {
+// 		console.log(v)
+// 		arr[v.x][v.y].isBlank = !1
+// 	})
+// }
+// const snooker = [{x: 2,y: 2}, {x: 4, y: 4}, {x: 3, y: 2},{x: 2, y: 3}, {x: 2, y: 4}, {x:2, y: 1} ]
+// makeSnooker(snooker)
+// function draw(arr, line) {
+// 	ctx.beginPath();
+// 	ctx.fillStyle = 'black'
+// 	console.log(arr)
+// 		line.forEach(v => {
+// 			if (!v.isBlock) {
+// 				ctx.moveTo(__GRIDWIDTH*(v.x + 0.05),__GRIDWIDTH*(v.y + 0.05));
+// 			    ctx.lineTo(__GRIDWIDTH*(v.x + 0.05),__GRIDWIDTH*(v.y + 0.95))
+// 			    ctx.lineTo(__GRIDWIDTH*(v.x + 0.95),__GRIDWIDTH*(v.y + 0.95))
+// 			    ctx.lineTo(__GRIDWIDTH*(v.x + 0.95),__GRIDWIDTH*(v.y + 0.05))
+// 			    ctx.lineTo(__GRIDWIDTH*(v.x + 0.05),__GRIDWIDTH*(v.y + 0.05));		
+// 			}
+			
+// 		})
+		
+// 	ctx.fill()
+// 	ctx.beginPath();
+// 	ctx.fillStyle = 'green'
+// 	arr.forEach(outV => {
+// 		outV.forEach(v => {
+// 			if (v.isBlock) {
+// 				ctx.moveTo(__GRIDWIDTH*(v.x + 0.05),__GRIDWIDTH*(v.y + 0.05));
+// 			    ctx.lineTo(__GRIDWIDTH*(v.x + 0.05),__GRIDWIDTH*(v.y + 0.95))
+// 			    ctx.lineTo(__GRIDWIDTH*(v.x + 0.95),__GRIDWIDTH*(v.y + 0.95))
+// 			    ctx.lineTo(__GRIDWIDTH*(v.x + 0.95),__GRIDWIDTH*(v.y + 0.05))
+// 			    ctx.lineTo(__GRIDWIDTH*(v.x + 0.05),__GRIDWIDTH*(v.y + 0.05));		
+// 			}
+			
+// 		})
+		
+// 	})
+// 	ctx.fill()
+// 	ctx.beginPath();
+// 	ctx.fillStyle = 'red'
+// 	snooker.forEach(v => {
+// 		ctx.moveTo(__GRIDWIDTH*(v.x + 0.05),__GRIDWIDTH*(v.y + 0.05));
+// 	    ctx.lineTo(__GRIDWIDTH*(v.x + 0.05),__GRIDWIDTH*(v.y + 0.95))
+// 	    ctx.lineTo(__GRIDWIDTH*(v.x + 0.95),__GRIDWIDTH*(v.y + 0.95))
+// 	    ctx.lineTo(__GRIDWIDTH*(v.x + 0.95),__GRIDWIDTH*(v.y + 0.05))
+// 	    ctx.lineTo(__GRIDWIDTH*(v.x + 0.05),__GRIDWIDTH*(v.y + 0.05));
+// 	})
+//     ctx.fill()
+// }
+// const line = new Line(arr[2][2], arr[4][4], 'r')
+
+// line.move()
+</script>
+</body>
+</html>
