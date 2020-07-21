@@ -1,9 +1,9 @@
 
 class Canvas {
 	constructor(w, h) {
-		this.canv = document.querySelector('#my-canvas')
-		this.ctx = this.canv.getContext('2d')
-		console.log(this.ctx)
+		const canv = document.querySelector('#my-canvas')
+		const ctx = canv.getContext('2d')
+		this.ctx = ctx
 	}
 	getCtx() {
 		return this.ctx

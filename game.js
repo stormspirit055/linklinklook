@@ -1,36 +1,385 @@
 class Game{
-	constructor(obj) {
+	constructor() {
+		this.log = new Log()
+		this.initData()
+		this.registerListener()
+	}
+	initData() {
+		clearInterval(this.timer)
 		this.cav = new Canvas()
 		this.ctx = this.cav.getCtx()
-		this.x = obj.x + 2 || 42   // 宽度
-		this.y = obj.y + 2 || 32   // 长度
-		this.start()
-		this._updataCanvas()
+		this.x = 20
+		this.y = 20
+		this.solveCount = 0
+		this.totalTime =  600
+		this.step = 600 / this.totalTime
+		this.remainderTime = this.totalTime
+		this.heroPositionMap = {}
+		const displayTime = document.querySelector('#totalTime')
+		const countdown = document.querySelector('#countdown')
+		countdown.style.width = '600px'
+		this.timer = setInterval(() => {
+			this.remainderTime--
+			countdown.style.width = (parseInt(countdown.style.width) - +(600 / this.totalTime).toFixed(1)) + 'px'
+			displayTime.innerHTML = `剩余时间:${(this.remainderTime / 10).toFixed(1)}s`
+			if (this.remainderTime === 0) this.gameOver('fail')
+		}, 100)
+		this.initHeroMap()
+		this.generateMap()
+		this.triggerLogHelper('GAME_START', '')
+	}
+	// 获取所有精灵数
+	getTotal() {
+		// 要除去四边的channel(航道)
+		return this.x * this.y - 2 * (this.x + this.y) + 4
+	}
+	initHeroMap() {
+		this.heroCountMap = {}
+		const ramainCount = (this.getTotal() - this.solveCount) / 2
+		const heroList = Object.keys(heroMap)
+		const heroLength = heroList.length
+		const groups = Math.floor(ramainCount / heroLength)
+		const remainder = ramainCount % heroLength
+		let point = 0
+		while(point < heroLength) {
+			if (point < remainder) {
+				this.heroCountMap[heroList[point]] = groups * 2 + 2
+			} else {
+				this.heroCountMap[heroList[point]] = groups * 2
+			}
+			point++
+		}
+		
+	}
+ 	registerListener() {
 		this.selectArr = []
 		const cav = document.getElementById('my-canvas')
 		let cavRect = cav.getBoundingClientRect()
-		const minLeft = cavRect.left + GRID_WIDTH * 1
-		const maxLeft = cavRect.left + GRID_WIDTH * 7
-		const minTop = cavRect.top + GRID_WIDTH * 1
-		const maxTop = cavRect.top + GRID_WIDTH * 7
+		const minLeft = cavRect.left
+		const maxLeft = cavRect.left + GRID_WIDTH * this.x
+		const minTop = cavRect.top
+		const maxTop = cavRect.top + GRID_WIDTH * this.y
 		document.addEventListener('click', (e) => {
 			if (e.x >= minLeft && e.x <= maxLeft && e.y >= minTop && e.y <= maxTop) {
 				const position = this.computeSelect(e.x - cavRect.left, e.y - cavRect.top)
+				if (this.arr[position[1]][position[0]].type !== 'sprite') {
+					console.log('无效点击')
+					if (this.selectArr.length) {
+						const pos = this.selectArr.pop()
+						this.arr[pos[1]][pos[0]].isSelect = false
+						this.arr[pos[1]][pos[0]].unDrawSelect(this.ctx)
+					}
+					return
+				}
+				if (this.selectArr.length === 1) {
+					const first = this.selectArr[0]
+					if (first[0] ===  position[0] && first[1] === position[1]) return 
+				}
 				this.selectArr.push(position)
-				this.arr[position[0]][position[1]].isSelect = true
-				if (this.selectArr.length > 2) {
-					const shiftPosistion = this.selectArr.shift()
-					this.arr[shiftPosistion[0]][shiftPosistion[1]].isSelect = false
-					this.computePath()
+				this.arr[position[1]][position[0]].isSelect = true
+				this.arr[position[1]][position[0]].drawSelect(this.ctx)
+				if (this.selectArr.length === 2) {
+					const result = this.computePath(this.selectArr[0], this.selectArr[1])
+					if (result) {
+						this.handleCorrectMatch(result)
+					} else {
+						this.handleWrongMatch()
+					}
 				}
 			}
 		})
 	}
-	unDrawSelect(position) {
-		this.arr[position[0]][position[1]].unDrawSelect(this.ctx)
+	saveMap() {
+		localStorage.setItem('llk_map', JSON.stringify(this.arr))
+		localStorage.setItem('llk_solveCount', this.solveCount)
+		localStorage.setItem('llk_heroPositionMap', JSON.stringify(this.heroPositionMap))
 	}
-	computePath() {
-		console.log('计算路径')
+	handleWrongMatch() {
+		this.triggerLogHelper('MATCH_WRONG', ``)
+		this.selectArr.forEach(v => {
+			this.arr[v[1]][v[0]].unDrawSelect(this.ctx)
+			this.arr[v[1]][v[0]].isSelect = false
+		})
+		this.selectArr = []
+	}
+	//  计算路径
+	computePath(pos1, pos2) {
+		let _this = this
+		const spirit1 = this.arr[pos1[1]][pos1[0]]
+		const spirit2 = this.arr[pos2[1]][pos2[0]]
+		if (spirit1.name !== spirit2.name) {
+			return false
+		}
+		const dirMap = [[0, -1], [1, 0], [0, 1], [-1, 0]]
+		const sx = pos1[0]
+		const sy = pos1[1]
+		const ex = pos2[0]
+		const ey = pos2[1]
+		let count = 0
+		let flag = 0
+		let resultPath
+		const result = dfs(sx, sy, -1, count, [[sx, sy]])
+		// 清除访问记录
+		for(let i = 0; i < this.arr.length; i++) {
+			for(let j = 0; j < this.arr[i].length; j++) {
+				this.arr[i][j].visited = false
+			}
+		}
+		if (result) {
+			return resultPath
+		} else {
+			return false
+		}
+		function judge(x, y) {
+			if (x >= 0 && y >= 0 && x < _this.x && y < _this.y) return true
+			return false
+		}
+		function dfs(x, y, direction, count, path) {
+			if (flag) return false
+			if(count === 3) {
+				return false
+			}
+			if (count === 2) {
+				if ((x === ex && y < ey && direction != 2) || (x === ex && y > ey && direction != 0) || (x > ex && y === ey && direction != 3) || (x < ex && y === ey && direction != 1)) return false
+			}
+			for (let i = 0; i < 4 ;i++) {
+				let addDir = 0
+				const nextX = dirMap[i][0] + x
+				const nextY = dirMap[i][1] + y
+				if (nextX < 0 || nextX >= _this.x || nextY < 0 || nextY >= _this.y) {
+					continue
+				}
+				if (direction !== i && direction !== -1) addDir = 1
+				if ( _this.arr[nextY][nextX].visited) {
+					continue
+				}
+				if ( _this.arr[nextY][nextX].type !== 'channel' ) {
+					if (nextY === ey && nextX === ex && count + addDir < 3) {
+						flag = 1
+						path.push([nextX, nextY])
+						resultPath = path
+						return true
+					}
+					continue
+				}
+				if (judge(nextX, nextY)) {
+					_this.arr[nextY][nextX].visited = true
+					const newPath = path.slice()
+					newPath.push([nextX, nextY])
+					if (dfs(nextX, nextY, i ,count + addDir, newPath)) {
+						return true
+					}
+					_this.arr[nextY][nextX].visited = false
+				} 
+			}
+			return false
+		}
+	}
+	// 日志输出辅助函数
+	triggerLogHelper(type, message) {
+		this.log.triggerLog(type, message, (this.remainderTime / 10).toFixed(1) + '秒')
+	}
+	// 处理正确匹配情况
+	handleCorrectMatch(resultPath) {
+		const countdown = document.querySelector('#countdown')
+		countdown.style.width = parseInt(countdown.style.width) + 3 * this.step + 'px'
+		this.remainderTime += 3
+		this.drawCorrectPath(resultPath)
+		this.triggerLogHelper('MATCH_CORRECT', '')
+		this.handleDelete2Pos()
+		this.solveCount += 2
+		this.selectArr = []
+		if (this.solveCount === this.getTotal()) {
+			// setTimeout(() => {
+				this.gameOver('win')
+			// }, 200)
+		} else {
+			if (this._computeHasSolution()) {
+				console.log('剩余地图有解')
+			} else {
+				this.resetMap(this.arr)
+			}
+		}
+	}
+	// 重置地图
+	resetMap() {
+		this.triggerLogHelper('MAP_RESET', '')
+		const ramainCount = (this.getTotal() - this.solveCount) / 2
+		const heroList = Object.keys(heroMap)
+		const heroLength = heroList.length
+		const groups = Math.floor(ramainCount / heroLength)
+		const remainder = ramainCount % heroLength
+		// return
+		while(!this._computeHasSolution()) {
+			let point = 0
+			while(point < heroLength) {
+				if (point < remainder) {
+					this.heroCountMap[heroList[point]] = groups * 2 + 2
+				} else {
+					this.heroCountMap[heroList[point]] = groups * 2
+				}
+				point++
+			}
+			Object.keys(this.heroPositionMap).forEach(v => {
+				this.heroPositionMap[v] = []
+			})
+			for(let i = 0; i < this.arr.length;i++) {
+				for(let j = 0; j < this.arr[i].length; j++) {
+					if (this.arr[i][j].type === 'sprite') {
+						const name = this.getRandomHero()
+						this.arr[i][j].name = name
+						this.heroPositionMap[name].push([j, i])
+					}
+				}
+			}
+		}
+		this._updataCanvas()
+	}
+	// 恢复地图
+	recoverMap(arr) {
+		console.log('恢复地图')
+		const newArr = []
+		for(let i = 0; i < arr.length;i++) {
+			const innerArr = []
+			for(let j = 0; j < arr[i].length; j++) {
+				if (arr[i][j].type === 'channel') {
+					const channel = new Sprite(this.ctx, j, i, 'channel', false)
+					innerArr.push(channel)
+				}
+				if (arr[i][j].type === 'sprite') {
+					const sprite = new Sprite(this.ctx, j, i, 'sprite', arr[i][j].name, false)
+					innerArr.push(sprite)
+				}
+			}
+			newArr.push(innerArr)
+		}
+		return newArr
+	}
+	// 成功配对消除后, 从坐标map中删除
+	handleDelete2Pos() {
+		const pos1 = this.selectArr[0]
+		const pos2 = this.selectArr[1]
+		let heroName = this.arr[pos1[1]][pos1[0]].name
+		let index1 = this.heroPositionMap[heroName].findIndex(v => {
+			return v[0] === pos1[0] && v[1] === pos1[1]
+		})
+		this.heroPositionMap[heroName].splice(index1, 1)
+		let index2 = this.heroPositionMap[heroName].findIndex(v => {
+			return v[0] === pos2[0] && v[1] === pos2[1]
+		})
+		this.heroPositionMap[heroName].splice(index2, 1)
+		this.selectArr = []
+	}
+	// 计算剩余地图是否还有解
+	_computeHasSolution() {
+		const keys = Object.keys(this.heroPositionMap)
+		for (let i  = 0; i < keys.length; i++) {
+			const list = this.heroPositionMap[keys[i]]
+			if (!list.length) continue
+			let point = 0
+			while(point < list.length) {
+				const pos1 = list[point]
+				for(let j = point + 1; j < list.length; j++) {
+					const result = this.computePath(pos1, list[j])
+					if (result) {
+						console.log('有解了')
+						return result
+					}
+				}
+				point++
+			}
+		}
+		return false
+	}
+	gameOver(type) {
+		clearInterval(this.timer)
+		setTimeout(() => {
+			switch(type) {
+				case 'win': 
+					this.handleWinGame()
+					break;
+				case 'fail': 
+					this.handleLoseGame()
+					break;
+			}
+		}, 200)
+	}
+	handleLoseGame() {
+		this.triggerLogHelper('GAME_OVER', `菜鸡, 你输了`)
+		const result = confirm(`菜鸡, 你输了`)
+		if (result) this.initData()
+	}
+	handleWinGame() {
+		this.triggerLogHelper('GAME_OVER', `牛逼的, 你赢了`)
+		const result = confirm(`牛逼的, 你赢了, 耗时${(this.remainderTime / 10).toFixed(1)}秒`)
+		if (result) this.initData()
+	}
+	handleCleanPath(resultPath) {
+		resultPath.forEach(v => {
+			this.arr[v[1]][v[0]].cleanWay(this.ctx)
+		})
+		
+	}
+	drawCorrectPath(resultPath) {
+		const first = resultPath[0]
+		const last = resultPath[resultPath.length - 1]
+		this.arr[first[1]][first[0]].type = 'channel'
+		this.arr[last[1]][last[0]].type = 'channel'
+		for(let i = 0; i < resultPath.length; i++) {
+			const cur = resultPath[i]
+			if (i === 0) {
+				const next = resultPath[i + 1]
+				let go = this._judgeDir(cur, next, 'go')
+				this.arr[cur[1]][cur[0]].drawWay(this.ctx, null, go)
+			} else if (i === resultPath.length - 1) {
+				const prev = resultPath[i - 1]
+				let come = this._judgeDir(prev, cur, 'come')
+				this.arr[cur[1]][cur[0]].drawWay(this.ctx, come, null)
+			} else {
+				const next = resultPath[i + 1]
+				const prev = resultPath[i - 1]
+				let come = this._judgeDir(prev, cur, 'come')
+				let go = this._judgeDir(cur, next, 'go')
+				this.arr[cur[1]][cur[0]].drawWay(this.ctx, come, go)
+			}
+		}
+		setTimeout(() => {
+			this.handleCleanPath(resultPath)
+		}, 300) 
+	}
+	_judgeDir(prev, next, type) {
+		if (type === 'go') {
+			if (prev[0] === next[0]) {
+				if (prev[1] < next[1]) {
+					return 'b'
+				} else {
+					return 't'
+				}
+			} 
+			if (prev[1] === next[1]) {
+				if (prev[0] < next[0]) {
+					return 'r'
+				} else {
+					return 'l'
+				}
+			} 
+		} else {
+			if (prev[0] === next[0]) {
+				if (prev[1] < next[1]) {
+					return 't'
+				} else {
+					return 'b'
+				}
+			} 
+			if (prev[1] === next[1]) {
+				if (prev[0] < next[0]) {
+					return 'l'
+				} else {
+					return 'r'
+				}
+			} 
+		}
+		
 	}
 	drawSelect(position) {
 		this.arr[position[0]][position[1]].drawSelect(this.ctx)
@@ -38,44 +387,69 @@ class Game{
 	computeSelect(x, y) {
 		return [Math.floor(x / GRID_WIDTH), Math.floor(y / GRID_WIDTH)]
 	}
-	start() {
-		const arr = []
-		for (let i = 0; i < this.x; i++) {
-			const innerarr = []
-			for (let j = 0; j < this.y; j++) {
-				if (i ==0 || i == this.x - 1 || j== 0 || j == this.y - 1) {
-					const block = new Spirit(this.ctx, i, j, 'block', false)
-					innerarr.push(block)	
-				} else if (i ==1 || i == this.x - 2 || j== 1 || j == this.y - 2) {
-					const channel = new Spirit(this.ctx, i, j, 'channel', false)
-					innerarr.push(channel)	
-				} else {
-					let spirit
-					if (Math.random() > 0.5 ) {
-						 spirit = new Spirit(this.ctx, i, j, 'spirit', heroList[Math.floor(Math.random() * 10)], false)
-					} else {
-						 spirit = new Spirit(this.ctx, i, j, 'channel', false)
+	generateMap() {
+		if (localStorage.getItem('llk_map')) {
+			const solveCount = JSON.parse(localStorage.getItem('llk_solveCount'))
+			const arr = JSON.parse(localStorage.getItem('llk_map'))
+			const heroPositionMap = JSON.parse(localStorage.getItem('llk_heroPositionMap'))
+			this.arr = this.recoverMap(arr)
+			this.solveCount = solveCount
+			this.heroPositionMap = heroPositionMap
+		} else {
+			const arr = []
+			for (let i = 0; i < this.y; i++) {
+				const innerarr = []
+				for (let j = 0; j < this.x; j++) {
+					if (i ==0 || i == this.y - 1 || j== 0 || j == this.x - 1) {
+						const channel = new Sprite(this.ctx, j, i, 'channel', false)
+						innerarr.push(channel)	
+					}else {
+						let sprite
+						const hero = this.getRandomHero()
+						sprite = new Sprite(this.ctx, j, i, 'sprite', hero, false)
+						if (this.heroPositionMap[hero]) {
+							this.heroPositionMap[hero].push([j, i])
+						} else {
+							this.heroPositionMap[hero] = [[j, i]]
+						}
+						innerarr.push(sprite)	
 					}
-					
-					// spirit.fillGrid(this.ctx)
-					innerarr.push(spirit)	
 				}
+				arr.push(innerarr)
 			}
-			arr.push(innerarr)
+			this.arr = arr
 		}
-		this.arr = arr
+		if (this._computeHasSolution()) {
+			this._updataCanvas()
+		} else {
+			this.resetMap(this.arr)
+		}
+	}
+	getRandomHero() {
+		const heroLength = Object.keys(heroMap).length
+		let hero = ''
+		while(!this.heroCountMap[hero] || this.heroCountMap[hero] === 0) {
+			const randomHeroIndex = Math.floor(Math.random() * heroLength)
+			 hero = Object.keys(heroMap)[randomHeroIndex]
+		}
+		this.heroCountMap[hero]--
+		return hero
 	}
 	drawSpirit() {
 		this.arr.forEach(arr => {
 			arr.forEach(v => {
-				v.draw(this.ctx)
+				if (v.type === 'sprite') v.draw(this.ctx)
 			})
 		})
 	}
+	prompt() {
+		const path = this._computeHasSolution()
+		const first = path[0]
+		const last = path[path.length - 1]
+		this.arr[first[1]][first[0]].drawPrompt(this.ctx)
+		this.arr[last[1]][last[0]].drawPrompt(this.ctx)
+	}
 	_updataCanvas() {
-    // this.timer = setTimeout(() => {
-      this.drawSpirit()
-    //   this._updataCanvas()
-    // }, 200)
+		this.drawSpirit()
   }
 }
