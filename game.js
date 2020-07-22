@@ -59,8 +59,9 @@ class Game{
 		const minTop = cavRect.top
 		const maxTop = cavRect.top + GRID_WIDTH * this.y
 		document.addEventListener('click', (e) => {
-			if (e.x >= minLeft && e.x <= maxLeft && e.y >= minTop && e.y <= maxTop) {
-				const position = this.computeSelect(e.x - cavRect.left, e.y - cavRect.top)
+			console.log(e)
+			if (e.pageX >= minLeft && e.pageX <= maxLeft && e.pageY >= minTop && e.pageY <= maxTop) {
+				const position = this.computeSelect(e.pageX - cavRect.left, e.pageY - cavRect.top)
 				if (this.arr[position[1]][position[0]].type !== 'sprite') {
 					console.log('无效点击')
 					if (this.selectArr.length) {
@@ -180,7 +181,7 @@ class Game{
 					}
 					continue
 				}
-				if (judge(nextX, nextY)) {
+				// if (judge(nextX, nextY)) {
 					// 标记访问过的点
 					_this.arr[nextY][nextX].visited = true
 					const newPath = path.slice()
@@ -190,7 +191,7 @@ class Game{
 					}
 					// 走到这步意味这条路已经失败了, 将之前标志过的点重置, 为另一条路做准备
 					_this.arr[nextY][nextX].visited = false
-				} 
+				// } 
 			}
 			return false
 		}
