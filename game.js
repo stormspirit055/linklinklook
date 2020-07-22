@@ -53,15 +53,15 @@ class Game{
  	registerListener() {
 		this.selectArr = []
 		const cav = document.getElementById('my-canvas')
-		let cavRect = cav.getBoundingClientRect()
-		const minLeft = cavRect.left
-		const maxLeft = cavRect.left + GRID_WIDTH * this.x
-		const minTop = cavRect.top
-		const maxTop = cavRect.top + GRID_WIDTH * this.y
+
+		const minLeft = cav.offsetLeft
+		const maxLeft = cav.offsetLeft + GRID_WIDTH * this.x
+		const minTop = cav.offsetTop
+		const maxTop = cav.offsetTop + GRID_WIDTH * this.y
 		document.addEventListener('click', (e) => {
 			console.log(e)
 			if (e.pageX >= minLeft && e.pageX <= maxLeft && e.pageY >= minTop && e.pageY <= maxTop) {
-				const position = this.computeSelect(e.pageX - cavRect.left, e.pageY - cavRect.top)
+				const position = this.computeSelect(e.pageX - cav.offsetLeft, e.pageY - cav.offsetTop)
 				if (this.arr[position[1]][position[0]].type !== 'sprite') {
 					console.log('无效点击')
 					if (this.selectArr.length) {
