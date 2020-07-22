@@ -49,7 +49,6 @@ class Game{
 			}
 			point++
 		}
-		
 	}
  	registerListener() {
 		this.selectArr = []
@@ -107,17 +106,20 @@ class Game{
 		let _this = this
 		const spirit1 = this.arr[pos1[1]][pos1[0]]
 		const spirit2 = this.arr[pos2[1]][pos2[0]]
+		// 若选中的两个元素不一致, 则直接返回false
 		if (spirit1.name !== spirit2.name) {
 			return false
 		}
+		// 方向map 上右下左
 		const dirMap = [[0, -1], [1, 0], [0, 1], [-1, 0]]
 		const sx = pos1[0]
 		const sy = pos1[1]
 		const ex = pos2[0]
 		const ey = pos2[1]
 		let count = 0
-		let flag = 0
-		let resultPath
+		let flag = 0   // 标志是否已经产生解
+		let resultPath // 最终解的全部路径
+		
 		const result = dfs(sx, sy, -1, count, [[sx, sy]])
 		// 清除访问记录
 		for(let i = 0; i < this.arr.length; i++) {
@@ -130,45 +132,63 @@ class Game{
 		} else {
 			return false
 		}
+		// 判断边界
 		function judge(x, y) {
 			if (x >= 0 && y >= 0 && x < _this.x && y < _this.y) return true
 			return false
 		}
+		/*
+		@ sx 当前x坐标
+		@ sy 当前y坐标
+		@ direction 方向(初始方向为-1)
+		@ count 拐弯次数
+		@ path 记录路径 
+		*/
 		function dfs(x, y, direction, count, path) {
+			// 如果已经有解, 则其他路径无需继续计算
 			if (flag) return false
+			// 拐弯次数达到3次返回false
 			if(count === 3) {
 				return false
 			}
+			// 剪枝, 当拐弯次数到达2次时意味着无法拐弯,拿当前点与结果点做对比, 可得出之后需要改变的方向, 如果此时方向与需要改变的方向不一致, 则返回false, 例如 当前点[1, 2] , 结果点[1. 3],可得出只能往右走. 
 			if (count === 2) {
 				if ((x === ex && y < ey && direction != 2) || (x === ex && y > ey && direction != 0) || (x > ex && y === ey && direction != 3) || (x < ex && y === ey && direction != 1)) return false
 			}
 			for (let i = 0; i < 4 ;i++) {
-				let addDir = 0
+				let addDir = 0   // 标志是否需要改变方向
 				const nextX = dirMap[i][0] + x
 				const nextY = dirMap[i][1] + y
+				// 边界判断
 				if (nextX < 0 || nextX >= _this.x || nextY < 0 || nextY >= _this.y) {
 					continue
 				}
+				// 如果当前点为起点, 或者与之前方向不一致, 则标志需要改变方向
 				if (direction !== i && direction !== -1) addDir = 1
+				// 因为每个点都4个方向, 访问过的点不能再回头
 				if ( _this.arr[nextY][nextX].visited) {
 					continue
 				}
+				// 跳出判断
 				if ( _this.arr[nextY][nextX].type !== 'channel' ) {
 					if (nextY === ey && nextX === ex && count + addDir < 3) {
 						flag = 1
 						path.push([nextX, nextY])
+						// 保存结果路径
 						resultPath = path
 						return true
 					}
 					continue
 				}
 				if (judge(nextX, nextY)) {
+					// 标记访问过的点
 					_this.arr[nextY][nextX].visited = true
 					const newPath = path.slice()
 					newPath.push([nextX, nextY])
 					if (dfs(nextX, nextY, i ,count + addDir, newPath)) {
 						return true
 					}
+					// 走到这步意味这条路已经失败了, 将之前标志过的点重置, 为另一条路做准备
 					_this.arr[nextY][nextX].visited = false
 				} 
 			}
@@ -446,6 +466,7 @@ class Game{
 		const path = this._computeHasSolution()
 		const first = path[0]
 		const last = path[path.length - 1]
+		console.log(first, last)
 		this.arr[first[1]][first[0]].drawPrompt(this.ctx)
 		this.arr[last[1]][last[0]].drawPrompt(this.ctx)
 	}
